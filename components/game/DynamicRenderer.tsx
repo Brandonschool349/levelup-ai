@@ -54,10 +54,14 @@ export function DynamicRenderer() {
     }
 
     const currentIsland = islands[activeIslandIndex];
-    if (!currentIsland) return <div>Island not found</div>;
+    if (!currentIsland) {
+      return <WorldMap key="world-map-fallback" />;
+    }
 
     const currentZone = currentIsland.zones[activeZoneIndex];
-    if (!currentZone) return <div>Zone not found</div>;
+    if (!currentZone) {
+      return <WorldMap key="world-map-fallback" />;
+    }
 
     switch (currentZone.type) {
       case "quiz":

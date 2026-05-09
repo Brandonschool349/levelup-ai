@@ -1,40 +1,119 @@
 export function buildPrompt() {
     return `
-You are an expert adaptive learning game engine.
+Return ONLY valid compact JSON. No markdown. No explanation.
 
-Your task is to generate ONLY valid JSON.
+Create a game learning roadmap for the user's topic.
 
-Generate a learning roadmap as a JSON object.
+Hard rules:
+- exactly 3 islands
+- exactly 3 zones per island
+- zone pattern per island: quiz, flashcard, sequence
+- content must be specific to the topic
+- short text only
+- no long explanations
+- no null
+- no trailing commas
 
-RULES:
+Quiz:
+- exactly 1 question per quiz zone
+- exactly 4 answers
+- use "answers"
+- "correct" is 1 to 4
 
-- EXACTLY 3 islands
-- EACH island must have EXACTLY 3 zones
-- difficulty must increase
-- include quizzes, flashcards, sequence or memory
-- include xpReward
-- include recoveryContent
-- include a finalBoss
+Flashcard:
+- exactly 2 cards
 
-The response MUST be valid JSON.
-DO NOT wrap in markdown.
-DO NOT explain anything.
+Sequence:
+- exactly 3 items
 
-Use this TypeScript shape:
+Final boss:
+- exactly 2 challenges
 
+JSON shape:
 {
-  "topic": "React",
+  "topic": "string",
   "themeColor": "cyan",
   "islands": [
     {
-      "id": "string",
+      "id": "island-1",
       "title": "string",
       "description": "string",
       "theme": "beginner",
-      "zones": []
+      "zones": [
+        {
+          "id": "zone-1-1",
+          "title": "string",
+          "description": "string",
+          "type": "quiz",
+          "difficulty": 1,
+          "xpReward": 100,
+          "recoveryContent": {
+            "simplifiedExplanation": "string",
+            "keyTakeaway": "string",
+            "miniFlashcards": [
+              { "front": "string", "back": "string" }
+            ]
+          },
+          "questions": [
+            {
+              "id": "q1",
+              "question": "string",
+              "answers": ["string", "string", "string", "string"],
+              "correct": 1,
+              "explanation": "string"
+            }
+          ]
+        },
+        {
+          "id": "zone-1-2",
+          "title": "string",
+          "description": "string",
+          "type": "flashcard",
+          "difficulty": 1,
+          "xpReward": 100,
+          "cards": [
+            { "id": "card-1", "front": "string", "back": "string" },
+            { "id": "card-2", "front": "string", "back": "string" }
+          ]
+        },
+        {
+          "id": "zone-1-3",
+          "title": "string",
+          "description": "string",
+          "type": "sequence",
+          "difficulty": 1,
+          "xpReward": 100,
+          "items": [
+            { "id": "item-1", "label": "string", "order": 1 },
+            { "id": "item-2", "label": "string", "order": 2 },
+            { "id": "item-3", "label": "string", "order": 3 }
+          ]
+        }
+      ]
     }
   ],
-  "finalBoss": {}
+  "finalBoss": {
+    "id": "final-boss",
+    "title": "Final Boss",
+    "description": "string",
+    "type": "boss",
+    "difficulty": 10,
+    "bossName": "string",
+    "maxHealth": 500,
+    "timeLimitSeconds": 90,
+    "xpReward": 1000,
+    "weakness": "Knowledge",
+    "mechanicType": "timed-quiz",
+    "challenges": [
+      {
+        "id": "boss-q1",
+        "question": "string",
+        "answers": ["string", "string", "string", "string"],
+        "correct": 1,
+        "explanation": "string"
+      }
+    ]
+  }
 }
 `;
 }

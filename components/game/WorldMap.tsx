@@ -2,11 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useGameStore } from "@/store/game-store";
-import {
-  ShieldAlert,
-  Sparkles,
-  Layers
-} from "lucide-react";
+import { ShieldAlert, Sparkles, Layers, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const themeStyles = {
@@ -33,34 +29,36 @@ export function WorldMap() {
     activeIslandIndex,
     enterZone,
     enterFinalBoss,
+    completedZoneIds,
   } = useGameStore();
 
   if (!islands?.length) return null;
 
+  const canEnterFinalBoss =
+    islands.length > 0 &&
+    islands.every((island) =>
+      island.zones.every((zone) => completedZoneIds.includes(zone.id))
+    );
+
   return (
     <div className="w-screen min-h-screen overflow-x-auto overflow-y-hidden px-12 py-20">
       <div className="flex items-center gap-16 min-w-max mx-auto">
-
         {islands.map((island, islandIdx) => {
-          const styles = themeStyles[island.theme as keyof typeof themeStyles] ?? themeStyles.beginner;
+          const styles =
+            themeStyles[island.theme as keyof typeof themeStyles] ??
+            themeStyles.beginner;
 
-          const isLocked = islandIdx > activeIslandIndex;
+          const isIslandLocked = islandIdx > activeIslandIndex;
+          const zones = island.zones.filter(Boolean).slice(0, 4);
 
           return (
             <motion.div
               key={island.id}
-              initial={{
-                opacity: 0,
-                y: 40,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
               className={cn(
                 "relative shrink-0",
-                isLocked &&
-                "opacity-40 grayscale"
+                isIslandLocked && "opacity-40 grayscale"
               )}
             >
               <div
@@ -70,12 +68,7 @@ export function WorldMap() {
                   styles.border
                 )}
               >
-                <h2
-                  className={cn(
-                    "text-3xl font-black",
-                    styles.title
-                  )}
-                >
+                <h2 className={cn("text-3xl font-black", styles.title)}>
                   {island.title}
                 </h2>
 
@@ -83,29 +76,45 @@ export function WorldMap() {
                   {island.description}
                 </p>
 
-                <div className="flex justify-between">
-                  {island.zones.map(
-                    (zone, idx) => (
+                <div className="flex justify-between gap-4">
+                  {zones.map((zone, idx) => {
+                    const previousZone = zones[idx - 1];
+
+                    const isFirstZone = idx === 0;
+                    const isPreviousZoneCompleted =
+                      !previousZone ||
+                      completedZoneIds.includes(previousZone.id);
+
+                    const isZoneCompleted = completedZoneIds.includes(zone.id);
+
+                    const isZoneLocked =
+                      isIslandLocked || (!isFirstZone && !isPreviousZoneCompleted);
+
+                    return (
                       <button
                         key={zone.id}
-                        onClick={() =>
-                          enterZone(
-                            islandIdx,
-                            idx
-                          )
-                        }
-                        disabled={isLocked}
-                        className="group flex flex-col items-center"
+                        onClick={() => {
+                          if (isZoneLocked) return;
+                          enterZone(islandIdx, idx);
+                        }}
+                        disabled={isZoneLocked}
+                        className={cn(
+                          "group flex flex-col items-center",
+                          isZoneLocked && "opacity-40 cursor-not-allowed"
+                        )}
                       >
                         <div
                           className={cn(
-                            "w-20 h-20 rounded-full border-2 flex items-center justify-center transition-all duration-300 hover:scale-110",
+                            "w-20 h-20 rounded-full border-2 flex items-center justify-center transition-all duration-300",
                             styles.border,
-                            styles.bg
+                            styles.bg,
+                            !isZoneLocked && "hover:scale-110",
+                            isZoneCompleted && "shadow-[0_0_30px_rgba(34,211,238,0.35)]"
                           )}
                         >
-                          {zone.type ===
-                            "quiz" ? (
+                          {isZoneLocked ? (
+                            <Lock className="w-8 h-8 text-white" />
+                          ) : zone.type === "quiz" ? (
                             <Sparkles className="w-8 h-8 text-white" />
                           ) : (
                             <Layers className="w-8 h-8 text-white" />
@@ -116,8 +125,8 @@ export function WorldMap() {
                           {zone.title}
                         </p>
                       </button>
-                    )
-                  )}
+                    );
+                  })}
                 </div>
               </div>
             </motion.div>
@@ -127,8 +136,17 @@ export function WorldMap() {
         <motion.button
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          onClick={enterFinalBoss}
-          className="shrink-0 w-52 h-52 rounded-full border-4 border-red-500 bg-red-950/50 backdrop-blur-xl flex flex-col items-center justify-center shadow-[0_0_50px_rgba(255,0,0,.3)] hover:scale-105 transition"
+          onClick={() => {
+            if (!canEnterFinalBoss) return;
+            enterFinalBoss();
+          }}
+          disabled={!canEnterFinalBoss}
+          className={cn(
+            "shrink-0 w-52 h-52 rounded-full border-4 border-red-500 bg-red-950/50 backdrop-blur-xl flex flex-col items-center justify-center shadow-[0_0_50px_rgba(255,0,0,.3)] transition",
+            canEnterFinalBoss
+              ? "hover:scale-105"
+              : "opacity-40 grayscale cursor-not-allowed"
+          )}
         >
           <ShieldAlert className="w-14 h-14 text-red-500" />
 
