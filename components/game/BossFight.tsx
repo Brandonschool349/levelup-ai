@@ -1,251 +1,386 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { BossZone } from "@/lib/types";
-import { useGameStore } from "@/store/game-store";
-import { ShieldAlert, Sword, Timer, Skull } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import {
+  ShieldAlert,
+  Zap,
+  Heart,
+  Skull,
+  CheckCircle2,
+  Timer,
+  Flame,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface BossFightProps {
-  zone: BossZone;
+type BossFightProps = {
+  zone: any;
   onComplete: () => void;
-}
+};
+
+const PLAYER_MAX_HEALTH = 100;
+const BOSS_MAX_HEALTH = 100;
+const DAMAGE_TO_BOSS = 20;
+const DAMAGE_TO_PLAYER = 25;
+const START_SECONDS = 45;
 
 export function BossFight({ zone, onComplete }: BossFightProps) {
-  const { addXP, takeDamage, playerStats, triggerDefeat } = useGameStore();
-  const [bossHealth, setBossHealth] = useState(zone.maxHealth);
-  const [timeLeft, setTimeLeft] = useState(zone.timeLimitSeconds);
-  const [shake, setShake] = useState(false);
-  const [attackAnimation, setAttackAnimation] = useState<"player" | "boss" | null>(null);
+  const questions = useMemo(() => {
+    const raw =
+      zone?.questions ||
+      zone?.quiz?.questions ||
+      zone?.bossQuestions ||
+      [];
 
-  const [quizIndex, setQuizIndex] = useState(0);
-  const [sequenceSelection, setSequenceSelection] = useState<string[]>([]);
+    if (Array.isArray(raw) && raw.length > 0) return raw;
 
-  // Clean up timer
+    return [
+      {
+        question: "What is the core concept of this challenge?",
+        options: [
+          "Understanding the fundamentals",
+          "Skipping the basics",
+          "Guessing randomly",
+          "Ignoring feedback",
+        ],
+        correctAnswerIndex: 0,
+      },
+      {
+        question: "What makes this interface agentic?",
+        options: [
+          "It adapts based on player performance",
+          "It only shows static text",
+          "It never changes state",
+          "It removes interaction",
+        ],
+        correctAnswerIndex: 0,
+      },
+      {
+        question: "Why does LevelUp AI generate worlds?",
+        options: [
+          "To turn topics into playable learning paths",
+          "To replace all UI with chat",
+          "To avoid feedback",
+          "To hide progression",
+        ],
+        correctAnswerIndex: 0,
+      },
+      {
+        question: "What should happen when users struggle?",
+        options: [
+          "The UI should adapt and support recovery",
+          "The app should punish them only",
+          "The journey should disappear",
+          "The boss should instantly win",
+        ],
+        correctAnswerIndex: 0,
+      },
+      {
+        question: "How do you defeat this boss?",
+        options: [
+          "By proving mastery across multiple answers",
+          "With one lucky answer",
+          "By skipping questions",
+          "By abandoning the quest",
+        ],
+        correctAnswerIndex: 0,
+      },
+    ];
+  }, [zone]);
+
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [bossHealth, setBossHealth] = useState(BOSS_MAX_HEALTH);
+  const [playerHealth, setPlayerHealth] = useState(PLAYER_MAX_HEALTH);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [lastResult, setLastResult] = useState<"correct" | "wrong" | null>(
+    null
+  );
+  const [isResolving, setIsResolving] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(START_SECONDS);
+
+  const currentQuestion = questions[questionIndex % questions.length];
+
+  const options =
+    currentQuestion?.options ||
+    currentQuestion?.answers ||
+    currentQuestion?.choices ||
+    [];
+
+  const correctAnswerIndex =
+    typeof currentQuestion?.correctAnswerIndex === "number"
+      ? currentQuestion.correctAnswerIndex
+      : typeof currentQuestion?.correct === "number"
+        ? currentQuestion.correct - 1
+        : 0;
+
   useEffect(() => {
-    if (timeLeft <= 0 || bossHealth <= 0 || playerStats.health <= 0) return;
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
+    if (isResolving) return;
+
+    const timer = window.setInterval(() => {
+      setSecondsLeft((prev) => {
         if (prev <= 1) {
-          clearInterval(timer);
-          triggerDefeat("Time Expired");
-          return 0;
+          setPlayerHealth((hp) => Math.max(0, hp - DAMAGE_TO_PLAYER));
+          setQuestionIndex((q) => q + 1);
+          return START_SECONDS;
         }
+
         return prev - 1;
       });
     }, 1000);
-    return () => clearInterval(timer);
-  }, [timeLeft, bossHealth, playerStats.health, triggerDefeat]);
 
-  const triggerShake = () => {
-    setShake(true);
-    setTimeout(() => setShake(false), 500);
-  };
+    return () => window.clearInterval(timer);
+  }, [isResolving]);
 
-  const handlePlayerAttack = (damage: number) => {
-    setAttackAnimation("player");
-    setTimeout(() => {
-      const newHealth = Math.max(0, bossHealth - damage);
-      setBossHealth(newHealth);
-      setAttackAnimation(null);
+  const handleAnswer = (optionIndex: number) => {
+    if (isResolving) return;
 
-      if (newHealth <= 0) {
-        addXP(zone.xpReward);
-        setTimeout(() => onComplete(), 2000);
-      }
-    }, 500);
-  };
+    setIsResolving(true);
+    setSelectedIndex(optionIndex);
 
-  const handleBossAttack = () => {
-    setAttackAnimation("boss");
-    // Standard boss attack damage, if it drops below 0 the store handles defeat flag
-    takeDamage(20, zone.bossName);
-    triggerShake();
-    setTimeout(() => setAttackAnimation(null), 500);
-  };
+    const isCorrect = optionIndex === correctAnswerIndex;
 
-  const renderTimedQuiz = () => {
-    if (!zone.challenges) return null;
-    const challenge = zone.challenges[quizIndex];
-    if (!challenge) return null;
+    if (isCorrect) {
+      setLastResult("correct");
 
-    const damage = Math.ceil(
-      zone.maxHealth /
-      (zone.challenges?.length || 1)
-    );
+      const nextBossHealth = Math.max(0, bossHealth - DAMAGE_TO_BOSS);
+      setBossHealth(nextBossHealth);
 
-    const onSelect = (idx: number) => {
-      if (idx === challenge.correctAnswerIndex) {
-        handlePlayerAttack(damage);
-        setTimeout(() => setQuizIndex(prev => prev + 1), 1000);
-      } else {
-        handleBossAttack();
-      }
-    };
+      setTimeout(() => {
+        if (nextBossHealth <= 0) {
+          onComplete();
+          return;
+        }
 
-    return (
-      <div className="w-full max-w-5xl mx-auto px-6 py-8">
-        <motion.div
-          key={quizIndex}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-black/60 backdrop-blur-xl border border-red-900/50 rounded-3xl p-8 md:p-12 shadow-[0_0_50px_rgba(239,68,68,0.15)] w-full"
-        >
-          <h3 className="text-3xl md:text-4xl text-white mb-12 text-center font-bold tracking-tight">
-            {challenge.question}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {challenge.options.map((option, idx) => (
-              <button
-                key={idx}
-                onClick={() => onSelect(idx)}
-                className="p-6 rounded-2xl border border-white/10 bg-white/5 hover:bg-red-900/40 hover:border-red-500/50 text-slate-200 transition-all text-left text-xl font-medium shadow-sm hover:shadow-[0_0_20px_rgba(239,68,68,0.3)]"
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </motion.div>
-      </div>
-    );
-  };
+        setQuestionIndex((prev) => prev + 1);
+        setSelectedIndex(null);
+        setLastResult(null);
+        setIsResolving(false);
+        setSecondsLeft(START_SECONDS);
+      }, 750);
 
-  const renderMechanic = () => {
-    switch (zone.mechanicType) {
-      case "timed-quiz": return renderTimedQuiz();
-      // simplified for golden path demo execution
-      default: return renderTimedQuiz();
+      return;
     }
+
+    setLastResult("wrong");
+
+    const nextPlayerHealth = Math.max(0, playerHealth - DAMAGE_TO_PLAYER);
+    setPlayerHealth(nextPlayerHealth);
+
+    setTimeout(() => {
+      setQuestionIndex((prev) => prev + 1);
+      setSelectedIndex(null);
+      setLastResult(null);
+      setIsResolving(false);
+      setSecondsLeft(START_SECONDS);
+    }, 750);
   };
 
-  const bossHealthPercent =
-    zone.maxHealth
-      ? (bossHealth / zone.maxHealth) * 100
-      : 100;
-
-  const playerHealthPercent =
-    playerStats.maxHealth
-      ? (
-        playerStats.health /
-        playerStats.maxHealth
-      ) * 100
-      : 100;
-
-  // Wait for defeat overlay to handle things if dead
-  if (playerStats.health <= 0) return null;
+  const timerTone =
+    secondsLeft <= 10
+      ? "text-red-300 border-red-400/40 bg-red-500/10"
+      : "text-cyan-200 border-cyan-300/30 bg-cyan-400/10";
 
   return (
-    <motion.div
-      className={cn(
-        "fixed inset-0 z-40 bg-black flex flex-col overflow-hidden",
-        shake && "animate-[shake_0.5s_ease-in-out]"
-      )}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
-      <div className="absolute inset-0 bg-gradient-to-b from-red-950/80 via-black to-slate-950 z-0" />
-      <motion.div
-        animate={{ scale: [1, 1.1, 1], opacity: [0.2, 0.4, 0.2] }}
-        transition={{ duration: 4, repeat: Infinity }}
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[1000px] bg-red-900/30 blur-[200px] rounded-full pointer-events-none z-0"
-      />
+    <section className="relative min-h-[calc(100vh-72px)] w-full overflow-hidden px-4 pb-6 pt-20 text-white">
+      <div className="fixed inset-0 -z-20 bg-black" />
+      <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_50%_15%,rgba(239,68,68,.30),transparent_30%),radial-gradient(circle_at_25%_75%,rgba(168,85,247,.22),transparent_32%),radial-gradient(circle_at_80%_70%,rgba(34,211,238,.12),transparent_28%)]" />
+      <div className="fixed inset-0 -z-10 bg-[linear-gradient(rgba(255,255,255,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.035)_1px,transparent_1px)] bg-[size:48px_48px] opacity-30" />
 
-      {/* Cinematic HUD - Centered and Constrained */}
-      <div className="relative z-20 w-full max-w-5xl mx-auto px-8 pt-12 flex justify-between items-start">
-        {/* Boss Header */}
-        <div className="flex flex-col w-[40%]">
-          <div className="flex items-center gap-4 mb-4">
-            <Skull className="w-12 h-12 text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]" />
-            <h2 className="text-4xl font-black text-white uppercase tracking-widest text-shadow-lg shadow-red-500 truncate">{zone.bossName}</h2>
-          </div>
-          <div className="h-6 w-full bg-black/80 rounded-full border border-red-900/50 overflow-hidden relative shadow-[0_0_30px_rgba(239,68,68,0.3)]">
-            <motion.div
-              className="absolute top-0 left-0 h-full bg-gradient-to-r from-red-800 to-red-500"
-              initial={{ width: "100%" }}
-              animate={{
-                width: `${Math.max(
-                  0,
-                  Math.min(100, bossHealthPercent)
-                )}%`,
-              }}
-              transition={{ duration: 0.5 }}
-            />
-          </div>
-        </div>
+      <div className="mx-auto flex min-h-[calc(100vh-120px)] max-w-7xl items-center">
+        <div className="grid w-full gap-6 lg:grid-cols-[0.95fr_1.15fr]">
+          <motion.div
+            initial={{ opacity: 0, x: -24 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="relative overflow-hidden rounded-[2rem] border border-red-400/50 bg-gradient-to-br from-red-950/80 via-black/90 to-fuchsia-950/60 p-6 shadow-2xl shadow-red-500/25 backdrop-blur-xl"
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(239,68,68,.18),transparent_58%)]" />
 
-        {/* Timer Center */}
-        <div className="flex flex-col items-center bg-black/80 backdrop-blur-md px-10 py-4 rounded-3xl border border-red-500/30 shadow-[0_0_50px_rgba(239,68,68,0.2)]">
-          <div className={cn("flex items-center gap-3 text-5xl font-mono font-black", timeLeft < 15 ? "text-red-500 animate-pulse" : "text-amber-400")}>
-            <Timer className="w-10 h-10" />
-            {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
-          </div>
-        </div>
+            <div className="relative">
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div>
+                  <p className="mb-2 text-xs font-black uppercase tracking-[0.35em] text-red-300">
+                    Final Boss
+                  </p>
 
-        {/* Player Header */}
-        <div className="flex flex-col items-end w-[40%]">
-          <div className="flex items-center gap-4 mb-4">
-            <h2 className="text-4xl font-black text-emerald-50 tracking-wide drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]">PLAYER</h2>
-          </div>
-          <div className="h-6 w-full bg-black/80 rounded-full border border-emerald-900/50 overflow-hidden relative shadow-[0_0_30px_rgba(16,185,129,0.2)]">
-            <motion.div
-              className="absolute top-0 right-0 h-full bg-gradient-to-l from-emerald-600 to-emerald-400 origin-right"
-              initial={{ width: "100%" }}
-              animate={{
-                width: `${Math.max(
-                  0,
-                  Math.min(100, playerHealthPercent)
-                )}%`,
-              }}
-              transition={{ duration: 0.5 }}
-            />
-          </div>
-        </div>
-      </div>
+                  <h1 className="text-4xl font-black text-red-100 md:text-5xl">
+                    {zone?.title || "Final Challenge"}
+                  </h1>
 
-      {/* Main Encounter Area */}
-      <div className="flex-1 relative z-10 flex items-center justify-center pb-12 w-full">
-        <AnimatePresence>
-          {attackAnimation === "player" && (
-            <motion.div
-              initial={{ x: -200, y: 100, opacity: 0, scale: 0.5 }}
-              animate={{ x: 0, y: -50, opacity: 1, scale: 2 }}
-              exit={{ opacity: 0, scale: 3 }}
-              className="absolute text-cyan-400 z-30 pointer-events-none drop-shadow-[0_0_30px_rgba(34,211,238,0.8)]"
-            >
-              <Sword className="w-48 h-48" />
-            </motion.div>
-          )}
-          {attackAnimation === "boss" && (
-            <motion.div
-              initial={{ x: 0, y: -200, opacity: 0, scale: 2 }}
-              animate={{ x: 0, y: 100, opacity: 1, scale: 1.5 }}
-              exit={{ opacity: 0 }}
-              className="absolute text-red-500 z-30 pointer-events-none drop-shadow-[0_0_50px_rgba(239,68,68,1)]"
-            >
-              <ShieldAlert className="w-64 h-64" />
-            </motion.div>
-          )}
-        </AnimatePresence>
+                  <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-300">
+                    {zone?.description ||
+                      "Defeat the boss by landing five correct strikes."}
+                  </p>
+                </div>
 
-        {bossHealth <= 0 ? (
-          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-center z-20 bg-black/90 p-16 rounded-[3rem] border-2 border-emerald-500/50 shadow-[0_0_100px_rgba(16,185,129,0.6)] backdrop-blur-xl">
-            <h1 className="text-8xl font-black text-emerald-400 neon-text mb-8 tracking-tighter">TITAN FALLEN</h1>
-            <p className="text-4xl text-emerald-200 font-bold">+{zone.xpReward} XP</p>
+                <div
+                  className={cn(
+                    "flex shrink-0 items-center gap-2 rounded-2xl border px-4 py-3 font-black",
+                    timerTone
+                  )}
+                >
+                  <Timer className="h-5 w-5" />
+                  {secondsLeft}s
+                </div>
+              </div>
+
+              <div className="my-6 flex justify-center">
+                <motion.div
+                  animate={{
+                    scale: [1, 1.06, 1],
+                    rotate: [0, -2, 2, 0],
+                  }}
+                  transition={{ duration: 2.2, repeat: Infinity }}
+                  className="relative flex h-44 w-44 items-center justify-center rounded-full border border-red-300/40 bg-red-500/10 shadow-[0_0_90px_rgba(239,68,68,.45)]"
+                >
+                  <div className="absolute h-64 w-64 rounded-full bg-red-500/10 blur-3xl" />
+                  <ShieldAlert className="relative h-24 w-24 text-red-300" />
+                </motion.div>
+              </div>
+
+              <div className="space-y-5">
+                <HealthBar
+                  label="Boss HP"
+                  value={bossHealth}
+                  icon={<Skull className="h-4 w-4" />}
+                  tone="boss"
+                />
+
+                <HealthBar
+                  label="Your HP"
+                  value={playerHealth}
+                  icon={<Heart className="h-4 w-4" />}
+                  tone="player"
+                />
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-white/10 bg-black/35 p-4 text-sm text-slate-300">
+                <span className="font-bold text-red-200">Rule:</span> 5 correct
+                strikes defeat the boss. Timer resets each question.
+              </div>
+            </div>
           </motion.div>
-        ) : (
-          renderMechanic()
-        )}
+
+          <motion.div
+            initial={{ opacity: 0, x: 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="relative overflow-hidden rounded-[2rem] border border-cyan-300/20 bg-slate-950/80 p-6 shadow-2xl backdrop-blur-xl"
+          >
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
+                  Challenge {questionIndex + 1}
+                </p>
+
+                <h2 className="mt-2 text-2xl font-black md:text-3xl">
+                  Answer to strike
+                </h2>
+              </div>
+
+              <div className="flex items-center gap-3 rounded-2xl border border-yellow-300/20 bg-yellow-400/10 px-4 py-3 text-yellow-200">
+                <Flame className="h-5 w-5" />
+                <span className="text-sm font-black">
+                  Hit {Math.floor((100 - bossHealth) / DAMAGE_TO_BOSS) + 1}/5
+                </span>
+              </div>
+            </div>
+
+            <div className="mb-5 rounded-3xl border border-white/10 bg-black/35 p-5">
+              <p className="text-lg font-bold leading-8 text-white md:text-xl">
+                {currentQuestion?.question || currentQuestion?.prompt}
+              </p>
+            </div>
+
+            <div className="grid gap-3">
+              {options.map((option: string, index: number) => {
+                const isSelected = selectedIndex === index;
+                const isCorrectOption = index === correctAnswerIndex;
+
+                return (
+                  <button
+                    key={`${option}-${index}`}
+                    disabled={isResolving}
+                    onClick={() => handleAnswer(index)}
+                    className={cn(
+                      "rounded-2xl border border-white/10 bg-white/5 p-4 text-left font-semibold text-slate-200 transition-all",
+                      "hover:border-cyan-300/40 hover:bg-cyan-400/10",
+                      isResolving && "cursor-not-allowed",
+                      isSelected &&
+                      lastResult === "correct" &&
+                      "border-emerald-400/60 bg-emerald-500/15 text-emerald-100",
+                      isSelected &&
+                      lastResult === "wrong" &&
+                      "border-red-400/60 bg-red-500/15 text-red-100",
+                      isResolving && isCorrectOption && "border-emerald-400/40"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-sm font-black">
+                        {index + 1}
+                      </span>
+
+                      <span>{option}</span>
+
+                      {isSelected && lastResult === "correct" && (
+                        <CheckCircle2 className="ml-auto h-5 w-5 text-emerald-300" />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {lastResult && (
+              <div
+                className={cn(
+                  "mt-5 rounded-2xl border p-4 text-center font-black",
+                  lastResult === "correct"
+                    ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-200"
+                    : "border-red-400/40 bg-red-500/10 text-red-200"
+                )}
+              >
+                {lastResult === "correct"
+                  ? `Critical hit. Boss took ${DAMAGE_TO_BOSS} damage.`
+                  : `Wrong answer. You took ${DAMAGE_TO_PLAYER} damage.`}
+              </div>
+            )}
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HealthBar({
+  label,
+  value,
+  icon,
+  tone,
+}: {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+  tone: "boss" | "player";
+}) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between text-xs font-black uppercase tracking-[0.22em] text-slate-400">
+        <span className="flex items-center gap-2">
+          {icon}
+          {label}
+        </span>
+
+        <span>{value}%</span>
       </div>
 
-      <style jsx global>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          10%, 30%, 50%, 70%, 90% { transform: translateX(-15px); }
-          20%, 40%, 60%, 80% { transform: translateX(15px); }
-        }
-      `}</style>
-    </motion.div>
+      <div className="h-3 overflow-hidden rounded-full bg-white/10">
+        <div
+          className={cn(
+            "h-full rounded-full transition-all duration-500",
+            tone === "boss" ? "bg-red-400" : "bg-cyan-400"
+          )}
+          style={{ width: `${value}%` }}
+        />
+      </div>
+    </div>
   );
 }

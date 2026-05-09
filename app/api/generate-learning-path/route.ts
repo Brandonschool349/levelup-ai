@@ -48,6 +48,7 @@ Return ONLY valid JSON.
                 config: {
                     responseMimeType: "application/json",
                     temperature: 0.1,
+                    maxOutputTokens: 1200,
                 },
             });
 

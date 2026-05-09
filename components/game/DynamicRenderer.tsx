@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useGameStore } from "@/store/game-store";
-import { WorldMap } from "./WorldMap";
+import WorldMap from "./WorldMap";
 import { QuizCard } from "./QuizCard";
 import { BossFight } from "./BossFight";
 import { Flashcard } from "./Flashcard";
