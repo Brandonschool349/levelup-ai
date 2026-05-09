@@ -72,7 +72,12 @@ export function DynamicRenderer() {
       case "memory":
         return <QuizCard key={`zone-fallback-${currentZone.id}`} zone={currentZone as any} onComplete={completeZone} />;
       default:
-        return <div>Unknown zone type</div>;
+        return (
+          <div className="text-red-500 text-2xl">
+            Unknown  zone type:
+            {JSON.stringify(currentZone, null, 2)}
+          </div>
+        );
     }
   };
 
@@ -85,7 +90,11 @@ export function DynamicRenderer() {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 1.05, y: -20 }}
           transition={{ duration: 0.6, type: "spring", bounce: 0.3 }}
-          className="w-full max-w-5xl mx-auto flex flex-col items-center justify-center"
+          className={
+            isInWorldMap
+              ? "w-full h-full"
+              : "w-full max-w-5xl mx-auto flex flex-col items-center justify-center"
+          }
         >
           {renderComponent()}
         </motion.div>

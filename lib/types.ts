@@ -1,3 +1,240 @@
+
+
+export const GOLDEN_PATH: GameData = {
+  topic: "React",
+  themeColor: "cyan",
+
+  islands: [
+    {
+      id: "island-1",
+      title: "React Foundations",
+      description: "Learn JSX and Components",
+      theme: "beginner",
+      zones: [
+        {
+          id: "zone-1",
+          title: "JSX Basics",
+          description: "Learn JSX",
+          type: "quiz",
+          difficulty: 1,
+          xpReward: 100,
+          questions: [
+            {
+              id: "q1",
+              question: "What does JSX stand for?",
+              options: [
+                "Java Syntax XML",
+                "JavaScript XML",
+                "JSON XML",
+                "Java Extended"
+              ],
+              correctAnswerIndex: 1,
+              explanation: "JSX means JavaScript XML."
+            }
+          ]
+        },
+        {
+          id: "zone-2",
+          title: "Props",
+          description: "Passing data",
+          type: "flashcard",
+          difficulty: 2,
+          cards: [
+            {
+              id: "f1",
+              front: "What are props?",
+              back: "Arguments passed to components."
+            }
+          ]
+        },
+        {
+          id: "zone-3",
+          title: "State",
+          description: "Dynamic values",
+          type: "quiz",
+          difficulty: 3,
+          xpReward: 150,
+          questions: [
+            {
+              id: "q2",
+              question: "Which hook stores state?",
+              options: [
+                "useEffect",
+                "useRef",
+                "useState",
+                "useMemo"
+              ],
+              correctAnswerIndex: 2,
+              explanation: "useState stores component state."
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      id: "island-2",
+      title: "Hooks Temple",
+      description: "Master hooks",
+      theme: "intermediate",
+      zones: [
+        {
+          id: "zone-4",
+          title: "useEffect",
+          description: "Effects",
+          type: "quiz",
+          difficulty: 4,
+          xpReward: 200,
+          questions: [
+            {
+              id: "q3",
+              question: "What does [] mean in useEffect?",
+              options: [
+                "Run always",
+                "Run once",
+                "Never runs",
+                "Error"
+              ],
+              correctAnswerIndex: 1,
+              explanation: "[] runs once on mount."
+            }
+          ]
+        },
+        {
+          id: "zone-5",
+          title: "Custom Hooks",
+          description: "Reusable logic",
+          type: "flashcard",
+          difficulty: 5,
+          cards: [
+            {
+              id: "f2",
+              front: "Custom hooks start with?",
+              back: "'use'"
+            }
+          ]
+        },
+        {
+          id: "zone-6",
+          title: "Dependencies",
+          description: "Hook control",
+          type: "sequence",
+          difficulty: 6,
+          xpReward: 250,
+          items: [
+            {
+              id: "s1",
+              label: "Render",
+              order: 1
+            },
+            {
+              id: "s2",
+              label: "Effect Runs",
+              order: 2
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      id: "island-3",
+      title: "React Mastery",
+      description: "Advanced concepts",
+      theme: "advanced",
+      zones: [
+        {
+          id: "zone-7",
+          title: "Performance",
+          description: "Optimization",
+          type: "quiz",
+          difficulty: 7,
+          xpReward: 300,
+          questions: [
+            {
+              id: "q4",
+              question: "Which hook memoizes values?",
+              options: [
+                "useCallback",
+                "useMemo",
+                "useState",
+                "useEffect"
+              ],
+              correctAnswerIndex: 1,
+              explanation: "useMemo memoizes values."
+            }
+          ]
+        },
+        {
+          id: "zone-8",
+          title: "Context API",
+          description: "Global state",
+          type: "flashcard",
+          difficulty: 8,
+          cards: [
+            {
+              id: "f3",
+              front: "Context API purpose?",
+              back: "Avoid prop drilling."
+            }
+          ]
+        },
+        {
+          id: "zone-9",
+          title: "Suspense",
+          description: "Loading UI",
+          type: "quiz",
+          difficulty: 9,
+          xpReward: 350,
+          questions: [
+            {
+              id: "q5",
+              question: "Suspense is used for?",
+              options: [
+                "Animations",
+                "Loading fallback",
+                "CSS",
+                "Routing"
+              ],
+              correctAnswerIndex: 1,
+              explanation: "Suspense handles loading fallback UI."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+
+  finalBoss: {
+    id: "boss-1",
+    title: "The React Overlord",
+    description: "Final Challenge",
+    type: "boss",
+    difficulty: 10,
+    bossName: "State Corruptor",
+    maxHealth: 1000,
+    timeLimitSeconds: 120,
+    xpReward: 1000,
+    weakness: "Immutability",
+    mechanicType: "timed-quiz",
+
+    challenges: [
+      {
+        id: "b1",
+        question: "Why avoid mutating state?",
+        options: [
+          "Too slow",
+          "React won't rerender",
+          "Syntax error",
+          "Memory leak"
+        ],
+        correctAnswerIndex: 1,
+        explanation: "React tracks object changes."
+      }
+    ]
+  }
+};
+
 export type ZoneType = "quiz" | "flashcard" | "sequence" | "memory" | "boss";
 
 export interface RecoveryContent {

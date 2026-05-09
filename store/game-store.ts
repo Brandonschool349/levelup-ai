@@ -24,7 +24,10 @@ interface GameState {
   // Actions
   setGenerating: (generating: boolean) => void;
   setGameData: (topic: string, themeColor: ThemeColor, islands: GameIsland[], finalBoss: BossZone) => void;
-  enterZone: (zoneIndex: number) => void;
+  enterZone: (
+    islandIndex: number,
+    zoneIndex: number
+  ) => void;
   completeZone: () => void;
   addXP: (amount: number) => void;
   takeDamage: (amount: number, cause?: string) => void;
@@ -90,11 +93,20 @@ export const useGameStore = create<GameState>((set, get) => ({
     },
   }),
 
-  enterZone: (zoneIndex) => set({
-    activeZoneIndex: zoneIndex,
-    isInWorldMap: false,
-    isInBossFight: false,
-  }),
+  enterZone: (
+    islandIndex,
+    zoneIndex
+  ) =>
+    set({
+      activeIslandIndex:
+        islandIndex,
+
+      activeZoneIndex:
+        zoneIndex,
+
+      isInWorldMap: false,
+      isInBossFight: false,
+    }),
 
   enterFinalBoss: () => set({
     isInBossFight: true,

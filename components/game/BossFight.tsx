@@ -70,7 +70,10 @@ export function BossFight({ zone, onComplete }: BossFightProps) {
     const challenge = zone.challenges[quizIndex];
     if (!challenge) return null;
 
-    const damage = Math.ceil(zone.maxHealth / zone.challenges.length);
+    const damage = Math.ceil(
+      zone.maxHealth /
+      (zone.challenges?.length || 1)
+    );
 
     const onSelect = (idx: number) => {
       if (idx === challenge.correctAnswerIndex) {
@@ -116,8 +119,18 @@ export function BossFight({ zone, onComplete }: BossFightProps) {
     }
   };
 
-  const bossHealthPercent = (bossHealth / zone.maxHealth) * 100;
-  const playerHealthPercent = (playerStats.health / playerStats.maxHealth) * 100;
+  const bossHealthPercent =
+    zone.maxHealth
+      ? (bossHealth / zone.maxHealth) * 100
+      : 100;
+
+  const playerHealthPercent =
+    playerStats.maxHealth
+      ? (
+        playerStats.health /
+        playerStats.maxHealth
+      ) * 100
+      : 100;
 
   // Wait for defeat overlay to handle things if dead
   if (playerStats.health <= 0) return null;
@@ -151,7 +164,12 @@ export function BossFight({ zone, onComplete }: BossFightProps) {
             <motion.div
               className="absolute top-0 left-0 h-full bg-gradient-to-r from-red-800 to-red-500"
               initial={{ width: "100%" }}
-              animate={{ width: `${bossHealthPercent}%` }}
+              animate={{
+                width: `${Math.max(
+                  0,
+                  Math.min(100, bossHealthPercent)
+                )}%`,
+              }}
               transition={{ duration: 0.5 }}
             />
           </div>
@@ -174,7 +192,12 @@ export function BossFight({ zone, onComplete }: BossFightProps) {
             <motion.div
               className="absolute top-0 right-0 h-full bg-gradient-to-l from-emerald-600 to-emerald-400 origin-right"
               initial={{ width: "100%" }}
-              animate={{ width: `${playerHealthPercent}%` }}
+              animate={{
+                width: `${Math.max(
+                  0,
+                  Math.min(100, playerHealthPercent)
+                )}%`,
+              }}
               transition={{ duration: 0.5 }}
             />
           </div>
